@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: Run all tests
+# key: test
+# --
+(clojure.test/run-all-tests)

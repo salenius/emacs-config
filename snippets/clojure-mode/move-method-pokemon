@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: move-method
+# key: movem
+# --
+(defmethod side-effect :$1
+  [state]
+  [$0])

@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: case-object
+# key: caseo
+# --
+case object $1 extends $2
+$0

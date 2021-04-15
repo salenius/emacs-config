@@ -1,0 +1,19 @@
+# -*- mode: snippet -*-
+# name: header 
+# key: usr
+# --
+;;; -*- lexical-binding: t -*-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Numeroiden käsittelyn kustomoidut funktiot
+;;; Author: Tommi Salenius
+;;; Email: tommisalenius@gmail.com
+;;; Created: `(tomreal/pvm "%d.%m.%Y")`
+;;; License: GPL `(tomreal/pvm "%Y")`
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;; Code:
+
+$0
+
+;;; `(buffer-name)` ends here

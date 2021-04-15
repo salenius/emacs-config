@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: lens
+# key: lens
+# --
+$1 :: Lens' ${2:From} ${3:To}
+$0$1 = lens _$1 (\upper lower -> upper {_$1 = lower})
+

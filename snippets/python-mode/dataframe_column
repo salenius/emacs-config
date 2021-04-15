@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: dataframe_column
+# key: dfc
+# --
+${1:df}['${2:col}']$0

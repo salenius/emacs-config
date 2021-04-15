@@ -1,0 +1,18 @@
+# -*- mode: snippet -*-
+# name: Header
+# key: usr
+# --
+(ns `(namespace-clojure)`
+ (:require [clojure.core.match :as m]
+  	   [clojure.spec.alpha :as s]
+	   [clojure.string :as str]
+	   [clojure.pprint :refer [pprint]])
+  (:gen-class))
+;; -------------------------- ;;
+;; $1
+;; Author: Tommi Salenius
+;; Date: `(tomreal/pvm-formated)`
+;; License: MIT (`(tomreal/pvm-year)`)
+;; -------------------------- ;;
+
+$0

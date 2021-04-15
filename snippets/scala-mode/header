@@ -1,0 +1,18 @@
+# -*- mode: snippet -*-
+# name: header
+# key: usr
+# --
+package $1
+
+/*
+$2
+Author: Tommi Salenius
+Date: `(tomreal/pvm-formated)`
+License: MIT (`(tomreal/pvm-year)`)
+*/
+
+${3:object} `(file-name-base buffer-file-name)` {
+
+	    $0
+
+}

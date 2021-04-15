@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: Spec-ja-orchestra
+# key: spec-orchestra
+# --
+(:require [clojure.spec.alpha :as s])
+(:require [orchestra.spec.test :as o])

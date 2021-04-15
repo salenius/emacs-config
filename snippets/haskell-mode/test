@@ -1,0 +1,11 @@
+# -*- mode: snippet -*-
+# name: test
+# key: test
+# --
+module $1Spec
+
+import Test.QuickCheck
+import $1
+
+instance Arbitrary $2 where
+  arbitrary = $0

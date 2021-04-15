@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: case-class
+# key: casec
+# --
+case class $1($2) extends $3
+$0

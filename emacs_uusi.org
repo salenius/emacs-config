@@ -258,6 +258,13 @@ toisen if-lauseen sisälle.)
 
 #+END_SRC 
 
+** PDF-tiedostojen reread from disk
+#+BEGIN_SRC emacs-lisp :lexical t
+
+(setq revert-without-query '(".pdf"))
+
+#+END_SRC 
+
 * Teema
 Valitse teematiedosto, jota haluat käyttää. 
 
@@ -354,6 +361,8 @@ Valitse teematiedosto, jota haluat käyttää.
   (evil/n "§" 'end-of-line)
   (evil/n "zj" 'evil-scroll-down)
   (evil/n "zk" 'evil-scroll-up)
+  (evil/n "zz" 'text-scale-increase)
+  (evil/n "zo" 'text-scale-decrease)
 
   (evil/n "ås" 'save-buffer)
   (evil/n "öb" 'counsel-ibuffer)
@@ -371,6 +380,8 @@ Valitse teematiedosto, jota haluat käyttää.
 
   (evil/n "åc" 'capitalize-word)
 
+  (evil/v "C-ö" 'comment-box)
+
   (defun tomreal/jump-scratch-buffer-or-back
       ()
     (interactive)
@@ -379,7 +390,10 @@ Valitse teematiedosto, jota haluat käyttää.
 	       (print (concat  "Going to buffer " (buffer-name))))
       (progn (print "Going to buffer *scratch*")
 	     (switch-to-buffer "*scratch*"))))
-  (evil/n "ös" 'tomreal/jump-scratch-buffer-or-back)
+  ;; (evil/n "ös" 'tomreal/jump-scratch-buffer-or-back)
+  (evil/n "ös" 'ace-swap-window)
+
+  (evil/i "C-?" 'evil-delete-backward-word)
 #+END_SRC 
 
 #+RESULTS: bufferit-ja-ikkunat
@@ -443,7 +457,6 @@ Valitse teematiedosto, jota haluat käyttää.
   (luo-avain python-mode "ör" elpy-shell-switch-to-shell)
   (evil-define-key 'normal inferior-python-mode-map "ör" 'evil-switch-to-windows-last-buffer)
   (luo-avain python-mode "åi" python-indentation-hydra/body)
-
 
 
 
@@ -546,6 +559,22 @@ Valitse teematiedosto, jota haluat käyttää.
 #+BEGIN_SRC emacs-lisp :lexical t
 
   (evil/n "åns" 'yas-new-snippet)
+
+#+END_SRC 
+
+** Kill ring ja isearch-string
+#+BEGIN_SRC emacs-lisp :lexical t
+
+  (defun tomreal/clear-isearch-string ()
+    (interactive)
+    (setq isearch-string nil))
+
+  (defun tomreal/clear-kill-ring ()
+    (interactive)
+    (setq kill-ring nil))
+
+  (evil/n "åyk" 'tomreal/clear-kill-ring)
+  (evil/n "åys" 'tomreal/clear-isearch-string)
 
 #+END_SRC 
 
@@ -809,6 +838,11 @@ Valitse teematiedosto, jota haluat käyttää.
       (sp-local-pair "$" "$")
       (sp-local-pair "$$" "$$"))
 
+    (sp-with-modes '(haskell-mode)
+      (sp-local-pair "'" nil :actions nil)
+      (sp-local-pair "{-" "-}")
+      (sp-local-pair "deriving (" ")" :trigger "deriving"))
+
     (sp-with-modes '(python-mode)
       (sp-local-pair "\"\"\"" "\"\"\"")
       (sp-local-pair "np.array([" "])" :trigger "np.array(")
@@ -831,6 +865,9 @@ Valitse teematiedosto, jota haluat käyttää.
 
     (sp-with-modes '(c-mode c++-mode)
       (sp-local-pair "/*" "*/"))
+
+    (sp-with-modes '(latex-mode)
+      (sp-local-pair "\begin{align}" "\end{align}"))
 
   )
 
@@ -1126,6 +1163,14 @@ Valitse teematiedosto, jota haluat käyttää.
 	  (interactive)
 	  (ido-completing-read "Valitse ympäristö: " (pyvenv-virtualenv-list)))
 	)
+
+  (add-hook 'python-mode-hook
+	    (lambda ()
+	      (evil-define-key 'insert python-mode-map (kbd "<C-backspace>") 'evil-delete-backward-word)))
+
+  ;; (add-hook 'python-mode-hook
+	    ;; (lambda ()
+	      ;; (define-key python-mode-map (kbd "<C-backspace>") 'backward-kill-word)
 #+END_SRC 
 
 * Clojure
@@ -1154,175 +1199,95 @@ Valitse teematiedosto, jota haluat käyttää.
   (require 'lsp)
   (require 'lsp-haskell)
   (require 'haskell-process)
-  (add-hook 'haskell-mode-hook 'interactive-haskell-mode)
-  (add-hook 'haskell-mode-hook #'lsp)
-  (add-hook 'haskell-literate-mode-hook #'lsp)
-#+END_SRC 
 
-* Scheme
-#+BEGIN_SRC emacs-lisp :lexical t
 
-;; Chicken-versio Schemesta
-(setq scheme-program-name "csi -:c")
-
-#+END_SRC 
-
-* LSP
-#+BEGIN_SRC emacs-lisp :lexical t
-
-  (use-package lsp-mode
-    ;; :defer t
-    :hook (python-mode . lsp)
-    (scala-mode . lsp)
-    (lsp-mode . lsp-lens-mode)
-    ;; :commands lsp
-
-    )
-
-  (use-package flycheck
-    :init (global-flycheck-mode))
-
-  ;; (use-package lsp-scala
-    ;; :load-path "~/path/to/lsp-scala"
-    ;; :./coursier bootstrap \
-  ;; --java-opt -Xss4m \
-  ;; --java-opt -Xms100m \
-  ;; --java-opt -Dmetals.client=emacs \
-  ;; org.scalameta:metals_2.12:0.9.4 \
-  ;; -r bintray:scalacenter/releases \
-  ;; -r sonatype:snapshots \
-  ;; -o /usr/local/bin/metals-emacs -fafter scala-mode
-    ;; :demand t
-    ;; :hook (scala-mode . lsp)
-    ;; :init (setq lsp-scala-server-command "~/bin/metals-emacs"))
-
-  (use-package lsp-metals
-    :config (setq lsp-metals-treeview-show-when-views-received t))
-
-  (use-package lsp-ui)
-
-  (setq lsp-ui-sideline-enable t)
-  (setq lsp-ui-peek-enable t)
-
-  ;; Debugging purposes
-  (use-package dap-mode
-    :hook
-    (lsp-mode . dap-mode)
-    (lsp-mode . dap-ui-mode)
-    )
-
-#+END_SRC 
-
-#+RESULTS:
-: t
-
-* ESS
-** Conffaus
-#+BEGIN_SRC emacs-lisp
-
-  (use-package ess
-    :ensure t
-    ;; :defer t ;; Pidä tässä kunnes keksit keinon toimia lokaalien key-chordien kanssa
-
+  (use-package haskell-mode
     :init
-    ;; (setq ess-use-auto-complete t)
-    (setq ess-first-tab-never-complete 'unless-eol)
-    (setq-default inferior-R-program-name "/usr/local/bin/R")
-    (add-hook 'inferior-ess-mode-hook 'aseta-comint-liikkeet)
-    (defun my-ess-hook ()
-      ;; ensure company-R-library is in ESS backends
-      (make-local-variable 'company-backends)
-      (cl-delete-if (lambda (x) (and (eq (car-safe x) 'company-R-args))) company-backends)
-      (push (list 'company-R-args 'company-R-objects 'company-R-library :separate
-		  company-backends)))
-
-    :hook my-ess-hook 
-
-    )
-
+    (progn
+      (add-hook 'haskell-mode-hook 'interactive-haskell-mode)
+      (add-hook 'haskell-mode-hook #'lsp)
+      (add-hook 'haskell-literate-mode-hook #'lsp)
+      (add-hook 'haskell-mode-hook 'haskell-auto-insert-module-template)
+      )
+    :config
+    (custom-set-variables
+     '(haskell-stylish-on-save t)))
 #+END_SRC 
-
-** Keychord
-#+NAME: ess-keychord
+** Dante
+Dante tarvitsee toimiakseen Emacs-version 27.1
 #+BEGIN_SRC emacs-lisp :lexical t
 
-  (key-chord-define ess-mode-map ",," (kirjoita " <- "))
-  (key-chord-define ess-mode-map "yu" (kirjoita " %>% "))
-
-#+END_SRC 
-* Dired
-#+BEGIN_SRC emacs-lisp :lexical t
-
-  (add-hook 'dired-mode-hook 'dired-hide-details-mode)
-  (define-key dired-mode-map "åq" 'dired-toggle-read-only)
-  (define-key wdired-mode-map "åq" 'wdired-exit)
-  (define-key dired-mode-map "b" 'revert-buffer)
-#+END_SRC 
-
-* EDBI
-#+BEGIN_SRC emacs-lisp :lexical t
-
-  (use-package edbi
-    :ensure t
-    )
-
-#+END_SRC 
-
-* EmacSQL
-#+BEGIN_SRC emacs-lisp :lexical t
-
-  ;; (use-package emacsql
-    ;; :ensure t
-    ;; :defer t
-
+  ;; (use-package dante
+    ;; :ensure t ; ask use-package to install the package
+    ;; :after haskell-mode
+    ;; :commands 'dante-mode
     ;; :init
-    ;; (use-package emacsql-sqlite
-      ;; :ensure t
-      ;; :defer t
-      ;; :init
-      ;; (require 'emacsql)
-      ;; (require 'emacsql-sqlite)
-      ;; (defvar tietokanta-polku "/Users/tommi/Tietokannat/")
-      ;; (defun tietokanta-yhteys (filu) (emacsql-sqlite (concat tietokanta-polku filu)))
-      ;; (setq db-jargon (tietokanta-yhteys "jargon.db"))
-      ;; )
+    ;; ;; flycheck backend deprecated October 2022
+    ;; ;; (add-hook 'haskell-mode-hook 'flycheck-mode)
+
+    ;; (add-hook 'haskell-mode-hook 'flymake-mode)
+    ;; (remove-hook 'flymake-diagnostic-functions 'flymake-proc-legacy-flymake)
+    ;; (add-hook 'haskell-mode-hook 'dante-mode)
+    ;; (add-hook 'haskell-mode-hook
+	      ;; (defun my-fix-hs-eldoc ()
+		;; (setq eldoc-documentation-strategy #'eldoc-documentation-default)))
+    ;; :config
+    ;; (require 'flymake-flycheck)
+    ;; (defalias 'flymake-hlint
+      ;; (flymake-flycheck-diagnostic-function-for 'haskell-hlint))
+    ;; (add-to-list 'flymake-diagnostic-functions 'flymake-hlint)
+    ;; ;; flycheck backend deprecated October 2022
+    ;; ;; (flycheck-add-next-checker 'haskell-dante '(info . haskell-hlint))
     ;; )
 
 #+END_SRC 
 
-* Markdown
+* Lilypond
 #+BEGIN_SRC emacs-lisp :lexical t
 
-  (setq markdown-css-paths `(,(expand-file-name "/Users/tommi/Css/markdown.css")))
+  (setq load-path (append (list (expand-file-name"/Users/tommi/lilypond-2.24.3/share/emacs/site-lisp")) load-path))
+  (autoload 'LilyPond-mode "lilypond-mode" "LilyPond Editing Mode" t)
+  (add-to-list 'auto-mode-alist '("\\.ly$" . LilyPond-mode))
+  (add-to-list 'auto-mode-alist '("\\.ily$" . LilyPond-mode))
+  (add-to-list 'auto-mode-alist '("\\.lytex$" . LilyPond-mode))
+  (add-hook 'LilyPond-mode-hook (lambda () (turn-on-font-lock)))
 
+  (setq locale-coding-system 'utf-8)
+  (set-terminal-coding-system 'utf-8)
+  (set-keyboard-coding-system 'utf-8)
+  (set-selection-coding-system 'utf-8)
+  (prefer-coding-system 'utf-8)
+
+  (evil-define-key 'normal LilyPond-mode-map (kbd "årr") 'LilyPond-command-all-midi)
 #+END_SRC 
 
-* Powerline
+* PDF_tools
 #+BEGIN_SRC emacs-lisp :lexical t
 
-  ;; (use-package powerline-mode
-      ;; :ensure t
-      ;; :init (powerline-vim-theme))
+  ;; (use-package pdf-tools
+   ;;  :pin manual
+     ;; :config
+     ;; (pdf-tools-install)
+     ;; (setq-default pdf-view-display-size 'fit-width)
+     ;; (define-key pdf-view-mode-map (kbd "C-s") 'isearch-forward)
+     ;; (define-key pdf-view-mode-map (kbd "öö") 'ace-swap-window)
+     ;; :custom
+     ;; (pdf-annot-activate-created-annotations t "automatically annotate highlights"))
 
-#+END_SRC 
+#+END_SRC
 
-* Scala
 #+BEGIN_SRC emacs-lisp :lexical t
+  ;; Tämän tarkoitus on kun tehdään Latex-dokumentteja joko org-modella tai ilman,
+  ;; ja ne käännetään pdf-tiedostoiksi, Emacs ei kysy jatkuvasti exporttauksen
+  ;; yhteydessä, että saako se ladata auki olevan pdf-tiedoston uudestaan.
 
-  (use-package scala
-    :defer t
-    :init
-    (add-hook 'scala-mode-hook
-	    (lambda ()
-	      (ammonite-term-repl-minor-mode t)
-	      ;; (electric-pair-mode t)
-	      ;; (smartparens-mode nil)
-	      (company-mode t)))
-    (setq scala-indent:indent-value-expression t)
-    (setq ammonite-term-repl-auto-detect-predef-file nil)
+  ;; Eli Latex-pohjaisten dokumenttien päivitys ja uuden tiedoston katsominen
+  ;; tulee nopeammaksi
 
-
-    )
+  (add-hook 'doc-view-minor-mode-hook (lambda ()
+					(define-key doc-view-mode-map (kbd "öö") 'ace-select-window)
+					(define-key doc-view-mode-map (kbd "åe") 'helm-command)
+					(define-key doc-view-mode-map (kbd "år") 'revert-buffer)))
 
 #+END_SRC 
 
@@ -1426,21 +1391,114 @@ Valitse teematiedosto, jota haluat käyttää.
 #+RESULTS:
 : t
 
-* Reddit
-Käytä Redditiä Emacsin kautta.
-#+BEGIN_SRC emacs-lisp
+* Scheme
+#+BEGIN_SRC emacs-lisp :lexical t
 
-  (use-package md4rd 
+;; Chicken-versio Schemesta
+(setq scheme-program-name "csi -:c")
+
+#+END_SRC 
+
+* Idris
+#+BEGIN_SRC emacs-lisp :lexical t
+
+  (setq idris-interpreter-path "idris2")
+  (add-hook 'idris-repl-mode-hook (lambda () (company-mode -1)))
+#+END_SRC 
+
+* LSP
+#+BEGIN_SRC emacs-lisp :lexical t
+
+  (use-package lsp-mode
+    ;; :defer t
+    :hook (python-mode . lsp)
+    (haskell-mode . lsp)
+    (lsp-mode . lsp-lens-mode)
+    ;; :commands lsp
+
+    )
+
+  (use-package flycheck
+    :init (global-flycheck-mode))
+
+  ;; (use-package lsp-scala
+    ;; :load-path "~/path/to/lsp-scala"
+    ;; :./coursier bootstrap \
+  ;; --java-opt -Xss4m \
+  ;; --java-opt -Xms100m \
+  ;; --java-opt -Dmetals.client=emacs \
+  ;; org.scalameta:metals_2.12:0.9.4 \
+  ;; -r bintray:scalacenter/releases \
+  ;; -r sonatype:snapshots \
+  ;; -o /usr/local/bin/metals-emacs -fafter scala-mode
+    ;; :demand t
+    ;; :hook (scala-mode . lsp)
+    ;; :init (setq lsp-scala-server-command "~/bin/metals-emacs"))
+
+  (use-package lsp-metals
+    :config (setq lsp-metals-treeview-show-when-views-received t))
+
+  (use-package lsp-ui)
+
+  (setq lsp-ui-sideline-enable t)
+  (setq lsp-ui-peek-enable t)
+
+  ;; Debugging purposes
+  (use-package dap-mode
+    :hook
+    (lsp-mode . dap-mode)
+    (lsp-mode . dap-ui-mode)
+    )
+
+#+END_SRC 
+
+#+RESULTS:
+: t
+
+* Dired
+#+BEGIN_SRC emacs-lisp :lexical t
+
+  (add-hook 'dired-mode-hook 'dired-hide-details-mode)
+  (define-key dired-mode-map "åq" 'dired-toggle-read-only)
+  ;;(define-key wdired-mode-map "åq" 'wdired-exit)
+  (define-key dired-mode-map "b" 'revert-buffer)
+#+END_SRC 
+
+* EDBI
+#+BEGIN_SRC emacs-lisp :lexical t
+
+  (use-package edbi
     :ensure t
-    :defer t
-    :config
-    (add-hook 'md4rd-mode-hook 'md4rd-indent-all-the-lines)
-    (setq md4rd-subs-active '(emacs lisp+Common_Lisp prolog clojure))
-    (setq md4rd--oauth-access-token
-	  reddit-tokeni-client-id)
-    (setq md4rd--oauth-refresh-token
-	  reddit-tokeni-secret-id)
-    (run-with-timer 0 3540 'md4rd-refresh-login))
+    )
+
+#+END_SRC 
+
+* EmacSQL
+#+BEGIN_SRC emacs-lisp :lexical t
+
+  ;; (use-package emacsql
+    ;; :ensure t
+    ;; :defer t
+
+    ;; :init
+    ;; (use-package emacsql-sqlite
+      ;; :ensure t
+      ;; :defer t
+      ;; :init
+      ;; (require 'emacsql)
+      ;; (require 'emacsql-sqlite)
+      ;; (defvar tietokanta-polku "/Users/tommi/Tietokannat/")
+      ;; (defun tietokanta-yhteys (filu) (emacsql-sqlite (concat tietokanta-polku filu)))
+      ;; (setq db-jargon (tietokanta-yhteys "jargon.db"))
+      ;; )
+    ;; )
+
+#+END_SRC 
+
+* Markdown
+#+BEGIN_SRC emacs-lisp :lexical t
+
+  (setq markdown-css-paths `(,(expand-file-name "/Users/tommi/Css/markdown.css")))
 
 #+END_SRC 
 

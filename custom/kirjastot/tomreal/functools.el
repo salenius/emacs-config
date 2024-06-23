@@ -11,5 +11,4 @@
 ;;; Code:
 
 
-
 ;;; functools.el ends here

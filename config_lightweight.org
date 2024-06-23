@@ -1,0 +1,872 @@
+#+STARTUP: showeverything
+#+TITLE: Emacs-konfiguraatio tiedosto vol 3
+#+AUTHOR: Tommi Salenius
+#+EMAIL: tommisalenius@gmail.com
+#+DATE: Su, 09.06.2024
+#+LICENCE: GPL (2024)
+#+LATEX_HEADER: \linespread{1.5}
+
+Tasan 5 vuotta vanhan Emacs-configin aloituksen jälkeen on hyvä aloittaa
+taas kerran alusta. :)
+
+* Asetukset
+#+BEGIN_SRC emacs-lisp
+
+  ;; Kieliasetukset
+
+  (set-language-environment "UTF-8") (set-default-coding-systems 'utf-8)
+  (set-locale-environment "fi_FI.UTF-8")
+  (setenv "LANG" "en_US.UTF-8")
+  (setenv "LC_ALL" "en_US.UTF-8")
+  (setenv "LC_CTYPE" "en_US.UTF-8")
+  (setq initial-scratch-message "Toimii")
+
+  ;; Oletusterminaali
+
+  (setq explicit-shell-file-name "/bin/zsh")
+
+  ;; Teema
+  ;; (load-theme 'manoj-dark)
+  (load-theme 'zenburn)
+
+
+  ;; Tallenus
+
+  (setq-default require-final-newline nil)
+
+  ;; Kyllä ja ei -kysymykset
+
+  (fset 'yes-or-no-p 'y-or-n-p)
+
+  ;; Rivinumerot oletusarvoisesti
+  ;; global-linum-mode on deprekoitu Emacsista 29 alkaen joten käytetään nyt tätä
+
+  (display-line-numbers-mode)
+
+  ;; Aloitusbuffer "scratch"
+
+  (setq inhibit-startup-screen t)
+
+
+#+END_SRC
+** Näppäimet
+#+BEGIN_SRC emacs-lisp :lexical t
+  (global-set-key (kbd "C-ä 7") (lambda () (insert "\\")))
+  (global-set-key (kbd "C-ä 2") (lambda () (insert "@")))
+  (global-set-key (kbd "C-ä 4") (lambda () (insert "$")))
+
+
+
+
+
+
+
+
+
+#+END_SRC 
+
+* Swiper
+#+BEGIN_SRC emacs-lisp
+
+  (use-package swiper
+    :ensure t)
+
+#+END_SRC 
+
+* Smartparens
+#+BEGIN_SRC emacs-lisp
+  (use-package smartparens
+    :ensure t
+
+    :config
+
+    (smartparens-global-mode 1)
+    (show-paren-mode 1)
+
+    ;; Chris Allenille kredit tästä
+    ;; Poista Lisp-moodeilta '-merkin ja `-merkin käyttö
+    ;; pareina, joiden vastine luodaan automaattisesti
+    (sp-with-modes sp--lisp-modes
+      (sp-local-pair "'" nil :actions nil) ; disable ', it's the quote character!
+      (sp-local-pair "`" "'" :when '(sp-in-string-p))) ; also only use the pseudo-quote inside strings where it serve as a hyperlink
+
+    (sp-with-modes '(org-mode)
+      (sp-local-pair "$" "$")
+      (sp-local-pair "$$" "$$"))
+
+    (sp-with-modes '(haskell-mode)
+      (sp-local-pair "'" nil :actions nil)
+      (sp-local-pair "{-" "-}")
+      (sp-local-pair "deriving (" ")" :trigger "deriving"))
+
+    (sp-with-modes '(python-mode)
+      (sp-local-pair "\"\"\"" "\"\"\"")
+      (sp-local-pair "np.array([" "])" :trigger "np.array(")
+      (sp-local-pair "(" ")")
+      (sp-local-pair "[" "]")
+      (sp-local-pair "{" "}")
+      (sp-local-pair "print(" ")")
+      (sp-local-pair "list(map(" "))" :trigger "map(")
+      (sp-local-pair "list(filter(" "))" :trigger "filter("))
+
+    (sp-with-modes '(scala-mode)
+      (sp-local-pair "/*" "*/")
+      (sp-local-pair "match {" "}" :trigger "match ")
+      (sp-local-pair "for {" "} yield " :trigger "for y")
+      (sp-local-pair "Option[" "]" :trigger "Option"))
+
+    (sp-with-modes '(sql-mode)
+      (sp-local-pair "/*" "*/")
+      (sp-local-pair "case" "end" :trigger "case "))
+
+    (sp-with-modes '(c-mode c++-mode)
+      (sp-local-pair "/*" "*/"))
+
+    (sp-with-modes '(latex-mode)
+      (sp-local-pair "\begin{align}" "\end{align}"))
+
+  )
+
+#+END_SRC 
+
+* Evil
+** Use-package
+#+BEGIN_SRC emacs-lisp :noweb yes
+
+  (use-package evil
+    :ensure t
+    :init
+
+    (defmacro def-avain (nimi moodi)
+      "Yleistyökalu, jonka avulla käyttäjä voi luoda funktioita, jotka asettavat
+      puolestaan pikanäppäinkomennon tietyn tilan funktioille. NIMI on funktion nimi,
+      jonka makro palauttaa, MOODI on puolesta mode, jolle funktio voi luoda näppäinyhdistelmän."
+      `(defun ,nimi (key func)
+	 (define-key ,moodi (kbd key) func)))
+
+    (defmacro luo-avain (moodi key func)
+      `(add-hook (quote ,(intern (concat (symbol-name moodi) "-hook")))
+		   (lambda () (evil-define-key 'normal ,(intern (concat (symbol-name moodi) "-map")) (kbd ,key) (quote ,func)))))
+
+
+    (defmacro kirjoita (merkki)
+      `(lambda ()
+	 (interactive)(insert ,merkki)))
+
+    (def-avain evil/ins evil-insert-state-map)
+    (def-avain evil/n evil-normal-state-map)
+    (def-avain evil/i evil-insert-state-map)
+    (def-avain evil/m evil-motion-state-map)
+    (def-avain evil/v evil-visual-state-map)
+    (def-avain company/a company-active-map)
+
+    :config
+    (evil-mode 1)
+
+    <<bufferit-ja-ikkunat>>
+    <<etsimis-tools-evil>>
+
+    (evil/n "C-ö" 'comment-line)
+    (evil/n "ål" 'eval-last-sexp)
+    (evil/n "åL" 'eval-last-sexp-and-replace-it-by-result)
+    (evil/n "å TAB" 'indent-region)
+
+    (evil/n "ånm" 'bookmark-set)
+    (evil/n "gm" 'helm-bookmarks)
+
+    (evil/i "C-ö" 'evil-normal-state)
+    <<evil-erikoismerkit>>
+    <<smartparens-evil>>
+
+    ;; Hydrat
+
+    (evil/n "åg" 'magit-hydra/body)
+    (evil/n "åt" 'shell-hydra/body)
+    <<keyboard-macro-hydra-blokki>>
+    (evil/n "q" 'keyboard-macro-hydra/body)
+
+    ;; Major mode -spesifit evil-pikanäppäimet
+    <<org-evil>>
+    )  
+#+END_SRC 
+** Bufferien ja ikkunoiden hallinta
+#+NAME: bufferit-ja-ikkunat
+#+BEGIN_SRC emacs-lisp :lexical t :tangle no
+  (evil/n "§" 'end-of-line)
+  (evil/n "zj" 'evil-scroll-down)
+  (evil/n "zk" 'evil-scroll-up)
+  (evil/n "zz" 'text-scale-increase)
+  (evil/n "zo" 'text-scale-decrease)
+
+  (evil/n "ås" 'save-buffer)
+  (evil/n "öb" 'counsel-ibuffer)
+  (evil/n "öä" 'kill-this-buffer)
+
+  (evil/n "öd" 'dired)
+  (evil/n "gf" 'helm-find-files)
+  (evil/n "ää" 'evil-execute-macro)
+
+  (evil/n "öwh" 'split-window-right)
+  (evil/n "öwv" 'split-window-below)
+  (evil/n "ökt" 'delete-window)
+  (evil/n "öka" 'delete-other-windows)
+  (evil/n "öö" 'ace-window)
+
+  (evil/n "åc" 'capitalize-word)
+
+  (evil/v "C-ö" 'comment-box)
+
+  (defun tomreal/jump-scratch-buffer-or-back
+      ()
+    (interactive)
+    (if (equal (buffer-name) "*scratch*")
+	(progn (evil-switch-to-windows-last-buffer)
+	       (print (concat  "Going to buffer " (buffer-name))))
+      (progn (print "Going to buffer *scratch*")
+	     (switch-to-buffer "*scratch*"))))
+  ;; (evil/n "ös" 'tomreal/jump-scratch-buffer-or-back)
+  (evil/n "ös" 'ace-swap-window)
+
+  (evil/i "C-?" 'evil-delete-backward-word)
+#+END_SRC 
+
+#+RESULTS: bufferit-ja-ikkunat
+: tomreal/jump-scratch-buffer-or-back
+
+** Smartparens
+#+NAME: smartparens-evil
+#+BEGIN_SRC emacs-lisp :lexical t :tangle no
+  (evil/i "å SPC" 'sp-forward-sexp)
+
+  (evil/n ",j" 'sp-join-sexp)
+  (evil/n ",s" 'sp-forward-slurp-sexp)
+  (evil/n ",S" 'sp-backward-slurp-sexp)
+  (evil/n ",b" 'sp-forward-barf-sexp)
+  (evil/n ",B" 'sp-backward-barf-sexp)
+  (evil/n ",u" 'sp-unwrap-sexp)
+  (evil/n ",k" 'sp-kill-sexp)
+  (evil/n "D" 'sp-kill-hybrid-sexp)
+  (evil/n ",K" 'sp-backward-kill-sexp)
+  (evil/n ",ww" 'sp-wrap-round)
+  (evil/n ",t" 'sp-transpose-sexp)
+  (evil/n ",T" 'sp-transpose-hybrid-sexp)
+  (evil/n ",a" 'sp-beginning-of-sexp)
+  (evil/n ",l" 'sp-end-of-sexp)
+  (evil/n ",e" 'sp-emit-sexp)
+
+  (evil/v ",ww" 'sp-wrap-round)
+  (evil/n ",wc" 'sp-wrap-curly)
+  (evil/v ",wc" 'sp-wrap-curly)
+  (evil/n ",ws" 'sp-wrap-square)
+  (evil/v ",ws" 'sp-wrap-square)
+#+END_SRC 
+
+** Projectile (pois käytöstä toistaiseksi)
+#+BEGIN_SRC emacs-lisp :lexical t
+
+  ;;(evil/n "åpgp" 'projectile-switch-project)
+  ;;(evil/n "åpgf" 'projectile-find-file)
+  ;;(evil/n "åpgg" 'projectile-grep)
+
+#+END_SRC 
+
+** Org
+#+NAME: org-evil
+#+BEGIN_SRC emacs-lisp :lexical t :tangle no
+  (luo-avain org-mode "åre" org-edit-src-code)
+  (luo-avain org-src-mode "ås" org-edit-src-exit)
+  (luo-avain org-mode "åx" org-export-dispatch)
+  (luo-avain org-mode "årr" org-ctrl-c-ctrl-c)
+  (luo-avain org-mode "åf" org-meta-hydra/body)
+#+END_SRC 
+
+** Python
+#+NAME: python-evil
+#+BEGIN_SRC emacs-lisp :lexical t :tangle no
+  (luo-avain python-mode "åd" elpy-doc)
+  (luo-avain python-mode "åp" python-projekti-hydra/body)
+  (luo-avain python-mode "årr" elpy-shell-send-buffer)
+  (luo-avain python-mode "årö" elpy-shell-send-buffer-and-go)
+  (evil-define-key 'visual python-mode-map "år" 'elpy-shell-send-region-or-buffer)
+  (luo-avain python-mode "ör" elpy-shell-switch-to-shell)
+  (evil-define-key 'normal inferior-python-mode-map "ör" 'evil-switch-to-windows-last-buffer)
+  (luo-avain python-mode "åi" python-indentation-hydra/body)
+
+
+
+#+END_SRC 
+
+** Erikoismerkit
+#+NAME: evil-erikoismerkit
+#+BEGIN_SRC emacs-lisp :lexical t :tangle no
+  (evil/i "å." (kirjoita "å"))
+  (evil/i "åi" (kirjoita "|"))
+  (evil/i "¨s" (kirjoita "\\"))
+  (evil/i "¨d" (kirjoita "$"))
+  (evil/i "å2" (kirjoita "@"))
+#+END_SRC 
+
+** LSP
+#+BEGIN_SRC emacs-lisp :lexical t
+
+  (evil/n "ådfd" 'xref-find-definitions-other-window)
+  (evil/n "ådfr" 'xref-find-references)
+  (evil/n "ådpd" 'lsp-ui-peek-find-definitions)
+  (evil/n "ådpr" 'lsp-ui-peek-find-references)
+
+
+#+END_SRC 
+
+** Apu- ja etsimistyökalut
+#+NAME: etsimis-tools-evil
+#+BEGIN_SRC emacs-lisp :lexical t :tangle no
+  (use-package smex
+    :ensure t)
+  (evil/n "åhf" 'counsel-describe-function)
+  (evil/n "åhv" 'counsel-describe-variable)
+  (evil/n "åhk" 'describe-key)
+  (evil/n "åhl" 'select-jargon)
+  (evil/n "åe" 'helm-M-x)
+  (evil/i "åe" 'helm-M-x)
+  (evil/v "åe" 'helm-M-x)
+  (evil/n "C-s" 'swiper)
+#+END_SRC 
+
+** Snippetit
+#+BEGIN_SRC emacs-lisp :lexical t
+
+  (evil/n "åns" 'yas-new-snippet)
+
+#+END_SRC 
+
+** Kill ring ja isearch-string
+#+BEGIN_SRC emacs-lisp :lexical t
+
+  (defun tomreal/clear-isearch-string ()
+    (interactive)
+    (setq isearch-string nil))
+
+  (defun tomreal/clear-kill-ring ()
+    (interactive)
+    (setq kill-ring nil))
+
+  (evil/n "åyk" 'tomreal/clear-kill-ring)
+  (evil/n "åys" 'tomreal/clear-isearch-string)
+
+#+END_SRC 
+
+* Magit
+#+BEGIN_SRC emacs-lisp :lexical t
+
+  (use-package magit
+    :ensure t)
+
+#+END_SRC 
+* Hydra
+** Use-package
+#+BEGIN_SRC emacs-lisp :noweb yes
+
+  (use-package hydra
+    :init
+
+    <<magit-hydra-blokki>>
+    <<shell-hydra-blokki>>
+    <<skrollaus-hydra-blokki>>
+    <<org-meta-hydra-blokki>>
+    <<helm-projektiili-hydra-blokki>>
+    <<python-projekti-hydra-blokki>>
+
+    )
+
+#+END_SRC 
+
+** Keyboard macro
+#+name: keyboard-macro-hydra-blokki
+#+BEGIN_SRC emacs-lisp :lexical t :tangle no
+
+  (defhydra keyboard-macro-hydra (:color pink :hint nil)
+    "
+  ^Peruskomento^             ^Makrojen hallinta^
+  ^^^^^^^^^^^^^^--------------------------------------
+  _o_: aloita makro          _r_: toista viimeisin makro
+  _e_: lopeta makro          _n_: nimeä viimeisin makro
+  _s_: aseta counter         _p_: pasteta viimeisin makro
+  _c_: counter + 1
+  "
+    ("o" start-kbd-macro :exit t)
+    ("e" end-kbd-macro :exit t)
+    ("s" kmacro-set-counter :exit t)
+    ("c" kmacro-add-counter :exit t)
+    ("r" call-last-kbd-macro)
+    ("n" name-last-kbd-macro)
+    ("p" insert-kbd-macro :exit t)
+    ("q" nil "peruuta" :color :blue))
+
+#+END_SRC 
+
+** Magit
+#+name: magit-hydra-blokki
+#+BEGIN_SRC emacs-lisp :lexical t :tangle no
+  (defhydra magit-hydra (:color pink
+				  :hint nil)
+      "
+  ^Branch^         ^Versionhallinta^
+  ^^^^^^^-----------------------------------
+  _s_: status       _a_: stageta kaikki muutokset
+  _i_: init         _f_: stageta tietty tiedosto
+  _o_: checkout     _c_: commitoi muutokset
+  ^^                _pl_: pullaa branchista
+  ^^                _psh_: pushaa Githubiin tms
+  "
+      ("s" magit-status :exit t)
+      ("i" magit-init)
+      ("o" magit-checkout)
+      ("a" magit-stage-modified)
+      ("f" magit-stage-file)
+      ("c" magit-commit :exit t) ;; Jotta voi kirjoittaa normaalisti
+      ("pl" magit-pull-from-upstream)
+      ("psh" magit-push-current-to-upstream :exit t)
+      ("q" nil "peruuta" :color blue))
+#+END_SRC 
+
+** Shell
+#+NAME: shell-hydra-blokki
+#+BEGIN_SRC emacs-lisp :lexical t :tangle no
+  (defhydra shell-hydra (:color pink :hint nil)
+	"
+    ^Terminaalit^     ^Tulkit^
+    ------------------------------------------------
+    _e_: Eshell       _p_: iPython
+    _t_: iTerm        _r_: R
+    "
+	("e" eshell :exit t)
+	("t" term :exit t)
+	("p" run-python :exit t)
+	("r" R :exit t)
+	("q" nil "peruuta" :color blue))
+
+#+END_SRC 
+
+** Org
+*** Metanäppäimet
+#+NAME: org-meta-hydra-blokki
+#+BEGIN_SRC emacs-lisp :lexical t :tangle no
+  (defhydra org-meta-hydra (:color pink :hint nil)
+	"
+    Liiku
+    -----
+    _j_: alas
+    _k_: ylös
+    _h_: vasen
+    _l_: oikea
+    _r_: aja koodi
+    "
+	("j" org-metadown)
+	("k" org-metaup)
+	("h" org-shiftmetaleft)
+	("l" org-shiftmetaright)
+	("r" org-ctrl-c-ctrl-c)
+	("q" nil "exit" :color blue))
+#+END_SRC 
+
+** Projectile
+*** Helm-versio
+#+NAME: helm-projektiili-hydra-blokki
+#+BEGIN_SRC emacs-lisp :lexical t :tangle no
+  (defhydra helm-projektiili-hydra (:color pink :hint nil :exit t)
+	"
+    Projektien hallinta
+    -------------------
+    _p_: etsi projekti
+    _f_: etsi tiedosto
+    _g_: etsi tiettyä regexiä
+    "
+	("p" helm-projectile-switch-project)
+	("f" helm-projectile-find-file)
+	("g" helm-projectile-grep)
+	("q" nil "exit" :color blue)
+	)
+#+END_SRC 
+
+** Dired
+#+BEGIN_SRC emacs-lisp :lexical t
+
+  (defhydra dired-info-hydra (:color pink :hint nil)
+    "
+  _f_: mene sisälle    _+_: luo kansio
+  _m_: merkitse        _!_: aja shell-komento
+  _u_: poista merkintä
+  _U_: poista merkintä kaikilta
+  _d_: merkitse poistettavaksi
+  _x_: poista merkityt
+  "
+    ("f" dired-find-file)
+    ("m" dired-mark)
+    ("u" dired-unmark)
+    ("U" dired-unmark-all-files)
+    ("d" dired-flag-file-deletion)
+    ("x" dired-do-flagged-delete)
+    ("+" dired-create-directory)
+    ("!" dired-do-shell-command)
+    ("quit" nil "quit" :color blue))
+
+#+END_SRC 
+
+** Muut työkalut
+*** Skrollaus
+#+NAME: skrollaus-hydra-blokki
+#+BEGIN_SRC emacs-lisp :lexical t
+  (defhydra skrollaus-hydra (:color pink :hint nil)
+      "
+  Skrollaa^
+  ----------------
+  _j_: alas   _k_: ylös
+  "
+      ("j" evil-scroll-down)
+      ("k" evil-scroll-up)
+      ("c" nil "peruuta" :color blue))
+#+END_SRC 
+* which-key
+#+BEGIN_SRC emacs-lisp :lexical t
+
+  (use-package which-key
+    :ensure t
+    :init
+    (which-key-mode 1)
+    )
+
+#+END_SRC 
+
+* Eshell
+** Pikanäppäimet
+#+BEGIN_SRC emacs-lisp :lexical t
+
+  (defun eshell/clear ()
+    "Clear the eshell buffer."
+    (interactive)
+    (let ((inhibit-read-only t))
+      (eshell-send-input)
+      (erase-buffer)))
+
+  (evil-define-key 'normal eshell-mode-map "åc" 'eshell/clear)
+  (evil-define-key 'normal eshell-mode-map "åc" 'eshell/clear)
+
+
+#+END_SRC 
+
+** Kustomointi
+    
+#+begin_src emacs-lisp
+  (require 'dash)
+  (require 's)
+
+  (defmacro with-face (STR &rest PROPS)
+    "Return STR propertized with PROPS."
+    `(propertize ,STR 'face (list ,@PROPS)))
+
+  (defmacro esh-section (NAME ICON FORM &rest PROPS)
+    "Build eshell section NAME with ICON prepended to evaled FORM with PROPS."
+    `(setq ,NAME
+	   (lambda () (when ,FORM
+		   (-> ,ICON
+		      (concat esh-section-delim ,FORM)
+		      (with-face ,@PROPS))))))
+
+  (defun esh-acc (acc x)
+    "Accumulator for evaluating and concatenating esh-sections."
+    (--if-let (funcall x)
+	(if (s-blank? acc)
+	    it
+	  (concat acc esh-sep it))
+      acc))
+
+  (defun esh-prompt-func ()
+    "Build `eshell-prompt-function'"
+    (concat esh-header
+	    (-reduce-from 'esh-acc "" eshell-funcs)
+	    "\n"
+	    eshell-prompt-string))
+
+
+  (esh-section esh-dir
+	       "\xf07c"  ;  (faicon folder)
+	       (abbreviate-file-name (eshell/pwd))
+	       '(:foreground "gold" :bold ultra-bold :underline t))
+
+  (esh-section esh-git
+	       "\xe907"  ;  (git icon)
+	       (magit-get-current-branch)
+	       '(:foreground "pink"))
+
+  (esh-section esh-python
+	       "\xe928"  ;  (python icon)
+	       pyvenv-virtual-env-name)
+
+  (esh-section esh-clock
+	       "\xf017"  ;  (clock icon)
+	       (format-time-string "%H:%M" (current-time))
+	       '(:foreground "forest green"))
+
+  ;; Below I implement a "prompt number" section
+  (setq esh-prompt-num 0)
+  (add-hook 'eshell-exit-hook (lambda () (setq esh-prompt-num 0)))
+  (advice-add 'eshell-send-input :before
+	      (lambda (&rest args) (setq esh-prompt-num (incf esh-prompt-num))))
+
+  ;; Laitetaan tämä sellaisenaan uinumaan nyt
+  ;; (esh-section esh-num
+	       ;; "\xf0c9"  ;  (list icon)
+	       ;; (number-to-string esh-prompt-num)
+	       ;; '(:foreground "brown"))
+
+  ;; Separator between esh-sections
+  (setq esh-sep " | ")  ; or "   "
+
+  ;; Separator between an esh-section icon and form
+  (setq esh-section-delim " ")
+
+  ;; Eshell prompt header
+  (setq esh-header "\n ")  ; or "\n┌─"
+
+  ;; Eshell prompt regexp and string. Unless you are varying the prompt by eg.
+  ;; your login, these can be the same.
+  (setq eshell-prompt-regexp " λ ")   ; or "└─> "
+  (setq eshell-prompt-string " λ ")   ; or "└─> "
+
+  ;; Choose which eshell-funcs to enable
+  (setq eshell-funcs
+	(list
+	 esh-dir
+	 esh-git
+	 esh-python
+	 esh-clock
+	 ;; esh-num
+	 ))
+
+  ;; Enable the new eshell prompt
+  (setq eshell-prompt-function 'esh-prompt-func)
+
+#+END_SRC 
+
+#+RESULTS:
+: esh-prompt-func
+* org
+#+BEGIN_SRC emacs-lisp :lexical t
+
+  (use-package org
+    :ensure t
+    :init
+
+    ;; Tuetut
+    (org-babel-do-load-languages
+     'org-babel-load-languages
+     '((python . t)
+       (ipython . t)
+       (R . t)
+       (sqlite . t)
+       (C . t)
+       (java . t)
+       (prolog . t)
+       (latex . t)
+       (matlab . t)
+       (haskell . t)
+       (emacs-lisp . t)
+       (js . t)))
+
+    ;; Aseta LaTeX-kaavojen highlightaus
+    (setq org-highlight-latex-and-related '(latex script entitites))
+
+    ;; Älä kysy näihin liittyen koodin evaluoimista
+    (defun my-org-confirm-babel-evaluate (lang body)
+      (not (member lang '("python" "clojure" "sh" "java" "R" "latex" "prolog" "haskell"
+			  "js" "emacs-lisp" "matlab"))))
+
+    (setq org-confirm-babel-evaluate 'my-org-confirm-babel-evaluate)
+
+
+    ;; Tiedoston kääntäminen toiseen formaatiin
+
+    )
+
+
+
+#+END_SRC 
+
+* LSP
+#+BEGIN_SRC emacs-lisp :lexical t
+
+   (use-package lsp-mode
+     ;; :defer t
+     :hook (python-mode . lsp)
+     (haskell-mode . lsp)
+     (lsp-mode . lsp-lens-mode)
+     ;; :commands lsp
+
+     )
+
+   (use-package flycheck
+     :init (global-flycheck-mode))
+
+   ;; (use-package lsp-scala
+     ;; :load-path "~/path/to/lsp-scala"
+     ;; :./coursier bootstrap \
+   ;; --java-opt -Xss4m \
+   ;; --java-opt -Xms100m \
+   ;; --java-opt -Dmetals.client=emacs \
+   ;; org.scalameta:metals_2.12:0.9.4 \
+   ;; -r bintray:scalacenter/releases \
+   ;; -r sonatype:snapshots \
+   ;; -o /usr/local/bin/metals-emacs -fafter scala-mode
+     ;; :demand t
+     ;; :hook (scala-mode . lsp)
+     ;; :init (setq lsp-scala-server-command "~/bin/metals-emacs"))
+
+  ;; Skalaa varten, ei tärkeä tässä vaiheessa.
+   ;; (use-package lsp-metals
+     ;; :config (setq lsp-metals-treeview-show-when-views-received t))
+
+  ;; Debugging purposes
+   (use-package dap-mode
+     :hook
+     (lsp-mode . dap-mode)
+     (lsp-mode . dap-ui-mode)
+     )
+
+
+   (use-package lsp-ui)
+
+   (setq lsp-ui-sideline-enable t)
+   (setq lsp-ui-peek-enable t)
+
+
+#+END_SRC 
+
+#+RESULTS:
+: t
+
+* Haskell
+#+BEGIN_SRC emacs-lisp :lexical t
+
+  (require 'haskell-interactive-mode)
+  (require 'lsp)
+
+  (require 'haskell-process)
+
+
+  (use-package haskell-mode
+    :init
+    (progn
+      (add-hook 'haskell-mode-hook 'interactive-haskell-mode)
+      (add-hook 'haskell-mode-hook #'lsp)
+      (add-hook 'haskell-literate-mode-hook #'lsp)
+      (add-hook 'haskell-mode-hook 'haskell-auto-insert-module-template)
+      )
+    :config
+    (custom-set-variables
+     '(haskell-stylish-on-save t)))
+#+END_SRC 
+
+* Key-Chord
+** Use-package
+#+BEGIN_SRC emacs-lisp :noweb yes
+
+  (use-package key-chord
+    :ensure t
+    :init
+
+    (defun evaluoi-ja-tallenna-tulos-leikepöydälle
+	(ssexp)
+      (interactive "P")
+      (thread-first ssexp
+	(eval-last-sexp)
+	(string)
+	(kill-new)
+	))
+
+    :config
+
+    (key-chord-mode 1)
+
+    (key-chord-define-global "eö" 'end-of-line)
+    (key-chord-define-global "öa" (lambda (x) (interactive "P")
+				    (progn (insert "[]") (backward-char))))
+    (key-chord-define-global "äa" (lambda (x) (interactive "P")
+				    (progn (insert "{}") (backward-char))))
+    (key-chord-define-global "öx" (lambda (x) (interactive "P")
+				    (insert "\\")))
+
+    ;; Hydrat
+    (key-chord-define-global "zx" 'skrollaus-hydra/body)
+
+    ;; org-mode
+    (key-chord-define org-mode-map "yu" 'org-meta-hydra/body)
+
+    ;; R:n lokaalit
+    ;; <<ess-keychord>>
+    ) 
+
+
+#+END_SRC 
+
+* Lilypond
+#+BEGIN_SRC emacs-lisp :lexical t
+
+  (setq load-path (append (list (expand-file-name"/Users/tommi/lilypond-2.24.3/share/emacs/site-lisp")) load-path))
+  (autoload 'LilyPond-mode "lilypond-mode" "LilyPond Editing Mode" t)
+  (add-to-list 'auto-mode-alist '("\\.ly$" . LilyPond-mode))
+  (add-to-list 'auto-mode-alist '("\\.ily$" . LilyPond-mode))
+  (add-to-list 'auto-mode-alist '("\\.lytex$" . LilyPond-mode))
+  (add-hook 'LilyPond-mode-hook (lambda () (turn-on-font-lock)))
+
+  (setq locale-coding-system 'utf-8)
+  (set-terminal-coding-system 'utf-8)
+  (set-keyboard-coding-system 'utf-8)
+  (set-selection-coding-system 'utf-8)
+  (prefer-coding-system 'utf-8)
+
+  (evil-define-key 'normal LilyPond-mode-map (kbd "årr") 'LilyPond-command-all-midi)
+#+END_SRC 
+
+* Key-Chord
+** Use-package
+#+BEGIN_SRC emacs-lisp :noweb yes
+
+  (use-package key-chord
+    :ensure t
+    :init
+
+    (defun evaluoi-ja-tallenna-tulos-leikepöydälle
+	(ssexp)
+      (interactive "P")
+      (thread-first ssexp
+	(eval-last-sexp)
+	(string)
+	(kill-new)
+	))
+
+    :config
+
+    (key-chord-mode 1)
+
+    (key-chord-define-global "eö" 'end-of-line)
+    (key-chord-define-global "öa" (lambda (x) (interactive "P")
+				    (progn (insert "[]") (backward-char))))
+    (key-chord-define-global "äa" (lambda (x) (interactive "P")
+				    (progn (insert "{}") (backward-char))))
+    (key-chord-define-global "öx" (lambda (x) (interactive "P")
+				    (insert "\\")))
+
+    ;; Hydrat
+    (key-chord-define-global "zx" 'skrollaus-hydra/body)
+
+    ;; org-mode
+    (key-chord-define org-mode-map "yu" 'org-meta-hydra/body)
+
+    ;; R:n lokaalit
+    ;; <<ess-keychord>>
+    ) 
+
+
+#+END_SRC 
+
+

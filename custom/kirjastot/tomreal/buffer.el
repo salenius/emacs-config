@@ -49,6 +49,11 @@
       (cider-switch-to-repl-buffer)
     (cider-switch-to-last-clojure-buffer)))
 
-
+;;; Tällä saa nykyisen bufferin koko pathin nimen
+(defun tomreal/file-path-current-buffer
+    ()
+  (interactive)
+  (expand-file-name (buffer-name)))
 
 ;;; buffer.el ends here
+
